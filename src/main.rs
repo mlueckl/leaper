@@ -3,7 +3,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-fn collect_dir_entries(input_dir: &Path) -> io::Result<Vec<PathBuf>> {
+fn dir_collect_entries(input_dir: &Path) -> io::Result<Vec<PathBuf>> {
     let mut entries = fs::read_dir(input_dir)?
         .map(|res| res.map(|e| e.path()))
         .collect::<Result<Vec<_>, io::Error>>()?;
@@ -13,14 +13,14 @@ fn collect_dir_entries(input_dir: &Path) -> io::Result<Vec<PathBuf>> {
     Ok(entries)
 }
 
-fn get_current_dir_entries() -> Vec<PathBuf> {
+fn dir_get_current_entries() -> Vec<PathBuf> {
     let cdir = current_dir().unwrap();
-    let e = collect_dir_entries(cdir.as_path());
+    let e = dir_collect_entries(cdir.as_path());
 
     e.unwrap()
 }
 
 fn main() {
-    let current = get_current_dir_entries();
+    let current = dir_get_current_entries();
     println!("{:?}", current);
 }
