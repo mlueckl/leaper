@@ -1,2 +1,2 @@
-# leap
-CLI tool to "leap" to the desired folder in your Path
+# Leaper
+A simple CLI tool to quickly leap to a directory

@@ -8,4 +8,8 @@ keywords = ["cli", "cd", "terminal"]
 categories = ["command-line-utilities"]
 license = "MIT"
 
+[[bin]]
+name = "leap"
+path = "src/main.rs"
+
 [dependencies]
