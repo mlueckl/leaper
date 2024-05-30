@@ -1,35 +1,25 @@
-use std::env::current_dir;
-use std::fs;
+use std::env::{args, current_dir};
+use std::fs::read_dir;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::process;
 
 struct Dirs {
     base_path: PathBuf,
-    directories: Vec<PathBuf>,
-    files: Vec<PathBuf>,
+    entries: Vec<PathBuf>,
 }
 
 impl Dirs {
     fn new(base_path: PathBuf) -> Self {
         Self {
             base_path,
-            directories: Vec::new(),
-            files: Vec::new(),
-        }
-    }
-
-    fn parse(&mut self, entries: Vec<PathBuf>) {
-        for e in entries {
-            match e.is_dir() {
-                true => self.directories.push(e),
-                false => self.files.push(e),
-            }
+            entries: Vec::new(),
         }
     }
 }
 
 fn dir_collect_entries(input_dir: &Path) -> io::Result<Vec<PathBuf>> {
-    let entries = fs::read_dir(input_dir)?
+    let entries = read_dir(input_dir)?
         .map(|res| res.map(|e| e.path()))
         .collect::<Result<Vec<_>, io::Error>>()?;
 
@@ -39,13 +29,28 @@ fn dir_collect_entries(input_dir: &Path) -> io::Result<Vec<PathBuf>> {
 fn dir_get_current_entries() -> Dirs {
     let mut current_dir = Dirs::new(current_dir().unwrap());
     let collection = dir_collect_entries(current_dir.base_path.as_path());
-    current_dir.parse(collection.unwrap());
+    current_dir.entries.extend(collection.unwrap());
 
     current_dir
 }
 
 fn main() {
-    let current_dir = dir_get_current_entries();
-    println!("Directories: {:?}", current_dir.directories);
-    println!("Files: {:?}", current_dir.files);
+    let args: Vec<String> = args().collect();
+
+    if args.len() != 2 {
+        println!("Too many or no argument(s) provided!");
+        process::exit(0);
+    }
+
+    let needle = &args[2];
+    let directory = dir_get_current_entries();
+
+    println!("Searching for {}", needle);
+
+    for entry in &directory.entries {
+        if entry.ends_with(needle) {
+            println!("Leaping to {}", entry.display());
+            leap::bash(format!("cd {} || exit 1\n$SHELL", entry.display()))
+        }
+    }
 }
