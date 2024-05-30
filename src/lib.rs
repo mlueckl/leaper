@@ -72,6 +72,9 @@ impl Dirs {
     fn _exists(&self) -> PathBuf {
         for entry in &self.entries {
             if entry.ends_with(&self.needle) {
+                if entry.is_file() {
+                    return entry.parent().unwrap().to_path_buf();
+                }
                 return entry.to_owned();
             }
         }
