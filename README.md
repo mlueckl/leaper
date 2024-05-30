@@ -37,3 +37,7 @@ Leaping to home/etc/misc/even_more_files/cathat.png
 home/etc/misc/even_more_files/ $
 ```
 As you can see, it will leap to the parent directory of the file.
+
+
+#### Notes
+- Warp terminal uses a specific profile behaviour, while the tool works, it will change your prompt to your default shell profile
