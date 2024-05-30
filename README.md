@@ -6,7 +6,7 @@ You are *home*, please cd instantly the *debug* folder, oh, you can't? :)
 
     .
     └── home/
-    ├── dev/
+        ├── dev/
         │   └── projects/
         │       └── fun
         └── etc/
@@ -17,8 +17,8 @@ You are *home*, please cd instantly the *debug* folder, oh, you can't? :)
             │       └── cathat.png
             └── more/
                 └── test/
-                ├── debug
-                └── release
+                    ├── debug
+                    └── release
 
 Try this!
 ```bash
