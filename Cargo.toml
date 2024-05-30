@@ -1,6 +1,11 @@
 [package]
-name = "leap"
+name = "leaper"
 version = "0.1.0"
 edition = "2021"
+description = "A simple CLI tool to quickly leap to a directory"
+repository = "https://github.com/mlueckl/leap"
+keywords = ["cli", "cd", "terminal"]
+categories = ["command-line-utilities"]
+license = "MIT"
 
 [dependencies]
