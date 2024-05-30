@@ -2,6 +2,13 @@
 ---
 A simple CLI tool to quickly leap to a directory.
 
+#### Installation
+*You have to have cargo installed*
+```bash
+cargo install leaper
+```
+
+#### Usage
 You are *home*, please cd instantly the *debug* folder, oh, you can't? :)
 
     .
