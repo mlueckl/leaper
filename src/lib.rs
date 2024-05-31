@@ -3,7 +3,6 @@ use std::fs::read_dir;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::{thread, time};
 
 pub fn cli_handler() -> ArgMatches {
     let match_results: ArgMatches = command!()
@@ -40,6 +39,10 @@ pub fn bash(cmd: String) {
 }
 
 fn dir_collect_entries(mut input_dir: &Path, upward: bool) -> io::Result<Vec<PathBuf>> {
+    if input_dir.parent().is_none() {
+        return Ok(Vec::new());
+    }
+
     input_dir = match upward {
         true => input_dir.parent().unwrap(),
         false => input_dir,
@@ -84,15 +87,23 @@ impl Dirs {
 
         for e in self.entries.drain(..) {
             if e.is_dir() {
-                let mut path = e.as_path();
-
-                if self.upward {
-                    path = e.parent().unwrap();
+                match self.upward {
+                    true => {
+                        if let Ok(dir_entries) =
+                            dir_collect_entries(e.parent().unwrap(), self.upward)
+                        {
+                            new_entries.extend(dir_entries);
+                            had_dirs = true;
+                            break;
+                        }
+                    }
+                    false => {
+                        if let Ok(dir_entries) = dir_collect_entries(e.as_path(), self.upward) {
+                            new_entries.extend(dir_entries);
+                        }
+                    }
                 }
 
-                if let Ok(dir_entries) = dir_collect_entries(path, self.upward) {
-                    new_entries.extend(dir_entries);
-                }
                 had_dirs = true;
             } else {
                 new_entries.push(e);
@@ -102,7 +113,6 @@ impl Dirs {
         if had_dirs == false {
             self.dirs_followed = true;
         }
-
         self.entries = new_entries;
     }
 
@@ -123,13 +133,10 @@ impl Dirs {
         while self.dirs_followed == false {
             let exists = self._exists();
             if exists.as_os_str().is_empty() == false {
-                self.dirs_followed = true;
                 return exists;
             }
 
             self._follow_dirs();
-            dbg!(&self.entries);
-            thread::sleep(time::Duration::from_secs(5));
         }
 
         PathBuf::new()
