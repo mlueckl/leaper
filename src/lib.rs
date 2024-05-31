@@ -1,7 +1,32 @@
+use clap::{command, Arg, ArgMatches};
 use std::fs::read_dir;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::{thread, time};
+
+pub fn cli_handler() -> ArgMatches {
+    let match_results: ArgMatches = command!()
+        .about("A simple CLI tool to quickly leap to a directory")
+        .arg(Arg::new("target").required(true))
+        .arg(
+            Arg::new("up")
+                .action(clap::ArgAction::SetTrue)
+                .short('u')
+                .long("up")
+                .help("Leap upwards to Parent directories"),
+        )
+        .arg(
+            Arg::new("path")
+                .action(clap::ArgAction::SetTrue)
+                .short('p')
+                .long("path")
+                .help("Return Path without leaping"),
+        )
+        .get_matches();
+
+    match_results
+}
 
 pub fn bash(cmd: String) {
     let mut command = Command::new("bash");
@@ -14,7 +39,12 @@ pub fn bash(cmd: String) {
         .expect("Failed to wait for command");
 }
 
-fn dir_collect_entries(input_dir: &Path) -> io::Result<Vec<PathBuf>> {
+fn dir_collect_entries(mut input_dir: &Path, upward: bool) -> io::Result<Vec<PathBuf>> {
+    input_dir = match upward {
+        true => input_dir.parent().unwrap(),
+        false => input_dir,
+    };
+
     let entries = read_dir(input_dir)?
         .map(|res| res.map(|e| e.path()))
         .collect::<Result<Vec<_>, io::Error>>()?;
@@ -22,38 +52,45 @@ fn dir_collect_entries(input_dir: &Path) -> io::Result<Vec<PathBuf>> {
     Ok(entries)
 }
 
-pub fn dir_get_current_entries(mut current_dir: Dirs) -> Dirs {
-    if let Ok(collection) = dir_collect_entries(current_dir.base_path.as_path()) {
-        current_dir.entries.extend(collection);
-    };
-
-    current_dir
-}
 #[derive(Debug)]
 pub struct Dirs {
     base_path: PathBuf,
     entries: Vec<PathBuf>,
-    needle: String,
+    target: String,
+    upward: bool,
     dirs_followed: bool,
 }
 
 impl Dirs {
-    pub fn new(base_path: PathBuf, needle: String) -> Self {
+    pub fn new(base_path: PathBuf, target: String, upward: bool) -> Self {
         Self {
             base_path,
             entries: Vec::new(),
-            needle,
+            target,
+            upward,
             dirs_followed: false,
         }
     }
 
+    pub fn dir_get_current_entries(&mut self) {
+        if let Ok(collection) = dir_collect_entries(self.base_path.as_path(), self.upward) {
+            self.entries.extend(collection);
+        };
+    }
+
     fn _follow_dirs(&mut self) {
-        let mut new_entries = Vec::new();
+        let mut new_entries = Vecs::new();
         let mut had_dirs = false;
 
         for e in self.entries.drain(..) {
             if e.is_dir() {
-                if let Ok(dir_entries) = dir_collect_entries(e.as_path()) {
+                let mut path = e.as_path();
+
+                if self.upward {
+                    path = e.parent().unwrap();
+                }
+
+                if let Ok(dir_entries) = dir_collect_entries(path, self.upward) {
                     new_entries.extend(dir_entries);
                 }
                 had_dirs = true;
@@ -71,7 +108,7 @@ impl Dirs {
 
     fn _exists(&self) -> PathBuf {
         for entry in &self.entries {
-            if entry.ends_with(&self.needle) {
+            if entry.ends_with(&self.target) {
                 if entry.is_file() {
                     return entry.parent().unwrap().to_path_buf();
                 }
@@ -86,10 +123,13 @@ impl Dirs {
         while self.dirs_followed == false {
             let exists = self._exists();
             if exists.as_os_str().is_empty() == false {
+                self.dirs_followed = true;
                 return exists;
             }
 
             self._follow_dirs();
+            dbg!(&self.entries);
+            thread::sleep(time::Duration::from_secs(5));
         }
 
         PathBuf::new()
