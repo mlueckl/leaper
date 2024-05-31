@@ -13,7 +13,7 @@ pub fn cli_handler() -> ArgMatches {
                 .action(clap::ArgAction::SetTrue)
                 .short('u')
                 .long("up")
-                .help("Leap upwards to Parent directories"),
+                .help("Leap upwards to Parent directories without following any subfolders"),
         )
         .arg(
             Arg::new("path")
