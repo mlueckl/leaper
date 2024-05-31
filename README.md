@@ -45,6 +45,18 @@ home/etc/misc/even_more_files/ $
 ```
 As you can see, it will leap to the parent directory of the file.
 
+#### CLI
+    Usage: leap [OPTIONS] <target>
+
+    Arguments:
+    <target>
+
+    Options:
+    -u, --up       Leap upwards to Parent directories without following any subfolders
+    -p, --path     Return Path without leaping
+    -h, --help     Print help
+    -V, --version  Print version
+
 
 #### Notes
 - Warp terminal uses a specific profile behaviour, while the tool works, it will change your prompt to your default shell profile
