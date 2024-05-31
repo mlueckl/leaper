@@ -79,7 +79,7 @@ impl Dirs {
     }
 
     fn _follow_dirs(&mut self) {
-        let mut new_entries = Vecs::new();
+        let mut new_entries = Vec::new();
         let mut had_dirs = false;
 
         for e in self.entries.drain(..) {
