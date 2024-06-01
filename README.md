@@ -2,6 +2,8 @@
 ---
 A simple CLI tool to quickly leap to a directory.
 
+*INFO: Tool spawns a new shell on every leap*
+
 #### Installation
 *You have to have cargo installed*
 ```bash
