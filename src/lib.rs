@@ -1,10 +1,9 @@
 use clap::{command, Arg, ArgMatches};
 use std::fs::read_dir;
-use std::io;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
-pub fn cli_handler() -> ArgMatches {
+/// Handle and return CL arguments
+pub fn args_handler() -> ArgMatches {
     let match_results: ArgMatches = command!()
         .about("A simple CLI tool to quickly leap to a directory")
         .arg(Arg::new("target").required(true))
@@ -27,20 +26,74 @@ pub fn cli_handler() -> ArgMatches {
     match_results
 }
 
-pub fn bash(cmd: String) {
-    let mut command = Command::new("bash");
-    command.arg("--login").arg("-c").arg(cmd);
-
-    command
-        .spawn()
-        .expect("Failed to spawn command")
-        .wait_with_output()
-        .expect("Failed to wait for command");
+/// Return all entries for given location
+pub fn get_entries(path: &Path, is_upward: bool) -> Option<Vec<PathBuf>> {
+    dir_collect_entries(path, is_upward)
 }
 
-fn dir_collect_entries(mut input_dir: &Path, upward: bool) -> io::Result<Vec<PathBuf>> {
+/// Find target and return if found
+pub fn find(mut entries: Vec<PathBuf>, target: &str, is_upward: bool) -> Option<PathBuf> {
+    let mut found = find_target(&entries, target);
+
+    while found.is_none() {
+        if let Some(unsearched_entries) = follow(&entries, is_upward) {
+            found = find_target(&unsearched_entries, target);
+            entries = unsearched_entries;
+        } else {
+            // No new entries
+            return None;
+        }
+    }
+
+    if found.is_some() {
+        return Some(found.unwrap().to_path_buf());
+    }
+
+    None
+}
+
+/// Follow directories and return unsearched entries
+pub fn follow(entries: &[PathBuf], is_upward: bool) -> Option<Vec<PathBuf>> {
+    let mut unsearched_entries: Vec<PathBuf> = Vec::new();
+
+    // Ignore directories and files from entries, already established that target was not found
+    for e in entries {
+        // Follow directories and add their elements to unsearched_entries
+        if e.is_dir() {
+            if is_upward {
+                if e.parent().is_some() {
+                    return Some(vec![e.parent().unwrap().to_path_buf()]);
+                }
+            }
+
+            if let Some(sub_entries) = get_entries(e.as_path(), is_upward) {
+                for se in sub_entries {
+                    unsearched_entries.push(se);
+                }
+            }
+        }
+    }
+
+    if unsearched_entries.is_empty() {
+        return None;
+    }
+
+    Some(unsearched_entries)
+}
+
+fn find_target(entries: &[PathBuf], target: &str) -> Option<PathBuf> {
+    for e in entries {
+        if e.to_string_lossy().ends_with(target) {
+            return Some(e.to_path_buf());
+        }
+    }
+
+    None
+}
+
+fn dir_collect_entries(mut input_dir: &Path, upward: bool) -> Option<Vec<PathBuf>> {
     if input_dir.parent().is_none() {
-        return Ok(Vec::new());
+        return None;
     }
 
     input_dir = match upward {
@@ -48,97 +101,23 @@ fn dir_collect_entries(mut input_dir: &Path, upward: bool) -> io::Result<Vec<Pat
         false => input_dir,
     };
 
-    let entries = read_dir(input_dir)?
-        .map(|res| res.map(|e| e.path()))
-        .collect::<Result<Vec<_>, io::Error>>()?;
+    let mut entries = Vec::new();
 
-    Ok(entries)
-}
-
-#[derive(Debug)]
-pub struct Dirs {
-    base_path: PathBuf,
-    entries: Vec<PathBuf>,
-    target: String,
-    upward: bool,
-    dirs_followed: bool,
-}
-
-impl Dirs {
-    pub fn new(base_path: PathBuf, target: String, upward: bool) -> Self {
-        Self {
-            base_path,
-            entries: Vec::new(),
-            target,
-            upward,
-            dirs_followed: false,
-        }
-    }
-
-    pub fn dir_get_current_entries(&mut self) {
-        if let Ok(collection) = dir_collect_entries(self.base_path.as_path(), self.upward) {
-            self.entries.extend(collection);
-        };
-    }
-
-    fn _follow_dirs(&mut self) {
-        let mut new_entries = Vec::new();
-        let mut had_dirs = false;
-
-        for e in self.entries.drain(..) {
-            if e.is_dir() {
-                match self.upward {
-                    true => {
-                        if let Ok(dir_entries) =
-                            dir_collect_entries(e.parent().unwrap(), self.upward)
-                        {
-                            new_entries.extend(dir_entries);
-                            had_dirs = true;
-                            break;
-                        }
+    match read_dir(input_dir) {
+        Ok(dirs) => {
+            for entry in dirs {
+                match entry {
+                    Ok(e) => {
+                        entries.push(e.path());
                     }
-                    false => {
-                        if let Ok(dir_entries) = dir_collect_entries(e.as_path(), self.upward) {
-                            new_entries.extend(dir_entries);
-                        }
-                    }
+                    Err(err) => println!("{}", err),
                 }
-
-                had_dirs = true;
-            } else {
-                new_entries.push(e);
             }
         }
-
-        if had_dirs == false {
-            self.dirs_followed = true;
+        Err(err) => {
+            println!("{}", err);
         }
-        self.entries = new_entries;
     }
 
-    fn _exists(&self) -> PathBuf {
-        for entry in &self.entries {
-            if entry.ends_with(&self.target) {
-                if entry.is_file() {
-                    return entry.parent().unwrap().to_path_buf();
-                }
-                return entry.to_owned();
-            }
-        }
-
-        PathBuf::new()
-    }
-
-    pub fn find(mut self) -> PathBuf {
-        while self.dirs_followed == false {
-            let exists = self._exists();
-            if exists.as_os_str().is_empty() == false {
-                return exists;
-            }
-
-            self._follow_dirs();
-        }
-
-        PathBuf::new()
-    }
+    Some(entries)
 }

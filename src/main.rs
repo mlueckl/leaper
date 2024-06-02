@@ -1,27 +1,20 @@
+use leaper::{find, get_entries};
 use std::env::current_dir;
 
 fn main() {
-    let cli = leaper::cli_handler();
+    // Handle CL arguments
+    let args = leaper::args_handler();
+    let target = args.get_one::<String>("target").unwrap();
+    let is_upward = args.get_flag("up");
 
-    let target = cli.get_one::<String>("target").unwrap().to_owned();
-    let mut directory = leaper::Dirs::new(
-        current_dir().unwrap(),
-        target.to_string(),
-        cli.get_flag("up"),
-    );
-    directory.dir_get_current_entries();
-
-    let target_path = directory.find();
-
-    if target_path.as_os_str().is_empty() == false {
-        match cli.get_flag("path") {
-            true => println!("Target Path: {}", target_path.display()),
-            false => {
-                leaper::bash(format!("cd {} || exit 1\n$SHELL", target_path.display()));
-                println!("Leaping to {}", target_path.display());
-            }
+    // Get directories & files of current location
+    if let Some(entries) = get_entries(current_dir().unwrap().as_path(), is_upward) {
+        if let Some(found) = find(entries, target, is_upward) {
+            println!("{}", found.display());
+        } else {
+            println!("");
         }
-    } else {
-        println!("{} not found", cli.get_one::<String>("target").unwrap());
+
+        leaper::
     }
 }
