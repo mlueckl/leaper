@@ -10,11 +10,13 @@ fn main() {
     // Get directories & files of current location
     if let Some(entries) = get_entries(current_dir().unwrap().as_path(), is_upward) {
         if let Some(found) = find(entries, target, is_upward) {
-            println!("{}", found.display());
+            if found.is_file() {
+                println!("{}", found.parent().unwrap().display());
+            } else {
+                println!("{}", found.display());
+            }
         } else {
             println!("");
         }
-
-        leaper::
     }
 }
