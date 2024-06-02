@@ -2,63 +2,51 @@
 ---
 A simple CLI tool to quickly leap to a directory.
 
-*INFO: Tool spawns a new shell on every leap*
-
-#### Installation
-*You have to have cargo installed*
-```bash
-cargo install leaper
-```
-
 #### Usage
-You are *home*, please cd instantly the *debug* folder, oh, you can't? :)
+You are *home*, switch to *debug* or to *cathat.png*'s directory
 
     .
     └── home/
         ├── dev/
-        │   └── projects/
-        │       └── fun
+        │   └── ...
+        │       └── ...
         └── etc/
             ├── misc/
-            │   ├── files
-            │   ├── more_files
             │   └── even_more_files/
             │       └── cathat.png
             └── more/
                 └── test/
                     ├── debug
-                    └── release
+                    └── ...
 
-Try this!
 ```bash
-home $ leap debug
-Leaping to home/etc/more/test/debug
-
-home/etc/more/test/debug $
+$ leaper debug
 ```
-Voilà!
 
-What about a file? Sure, let's leap to the PNG.
 ```bash
-home $ leap cathat.png
-Leaping to home/etc/misc/even_more_files/cathat.png
-
-home/etc/misc/even_more_files/ $
+$ leaper cathat.png
 ```
-As you can see, it will leap to the parent directory of the file.
 
-#### CLI
-    Usage: leap [OPTIONS] <target>
+```bash
+$ leaper --help
+```
 
-    Arguments:
-    <target>
+#### Setup
+1. Run `cargo install leaper`
+2. Create shell action
 
-    Options:
-    -u, --up       Leap upwards to Parent directories without following any subfolders
-    -p, --path     Return Path without leaping
-    -h, --help     Print help
-    -V, --version  Print version
+##### Zsh example
+```zsh
+leap() {
+    # Call tool and forward all args
+    local dir_path=$(leaper "$@")
 
-
-#### Notes
-- Warp terminal uses a specific profile behaviour, while the tool works, it will change your prompt to your default shell profile
+    # Check if a path was returned
+    if ["$dir_path"]; then
+        # 'cd' to the directory
+        cd "$dir_path"
+    else
+        echo "'$1' not found"
+    fi
+}
+```
