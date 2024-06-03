@@ -42,7 +42,7 @@ leap() {
     local dir_path=$(leaper "$@")
 
     # Check if a path was returned
-    if ["$dir_path"]; then
+    if [[ -d "$dir_path" ]]; then
         # 'cd' to the directory
         cd "$dir_path"
     else
