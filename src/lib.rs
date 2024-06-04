@@ -28,7 +28,7 @@ pub fn args_handler() -> ArgMatches {
 }
 
 /// Reads entries in provided directory
-pub fn read_entries_from_dir(input_dir: &Path, is_upward: bool) -> io::Result<ReadDir> {
+pub fn get_read_dir(input_dir: &Path, is_upward: bool) -> io::Result<ReadDir> {
     let dir = if is_upward {
         input_dir
             .parent()
@@ -42,22 +42,17 @@ pub fn read_entries_from_dir(input_dir: &Path, is_upward: bool) -> io::Result<Re
 
 /// Extracts the found entries in directory
 pub fn extract_entries(dir_entries: ReadDir) -> io::Result<Vec<PathBuf>> {
-    let mut entries = Vec::new();
-
-    for entry in dir_entries {
-        match entry {
-            Ok(e) => entries.push(e.path()),
-            // Should function fail if one entry can't be read?
-            Err(err) => return io::Result::Err(err),
-        }
-    }
-
-    Ok(entries)
+    dir_entries
+        .filter_map(|entry| match entry {
+            Ok(e) => Some(Ok(e.path())),
+            Err(err) => Some(Err(err)),
+        })
+        .collect()
 }
 
 /// Return all entries for given location
 pub fn get_entries(path: &Path, is_upward: bool) -> io::Result<Vec<PathBuf>> {
-    match read_entries_from_dir(path, is_upward) {
+    match get_read_dir(path, is_upward) {
         Ok(dir_entries) => extract_entries(dir_entries),
         Err(err) => return Result::Err(err),
     }
