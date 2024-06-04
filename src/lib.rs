@@ -1,5 +1,6 @@
 use clap::{command, Arg, ArgMatches};
-use std::fs::read_dir;
+use std::fs::{read_dir, ReadDir};
+use std::io;
 use std::path::{Path, PathBuf};
 
 /// Handle and return CL arguments
@@ -26,9 +27,50 @@ pub fn args_handler() -> ArgMatches {
     match_results
 }
 
+/// Reads entries in provided directory
+pub fn read_entries_from_dir(input_dir: &Path, is_upward: bool) -> io::Result<ReadDir> {
+    let dir = if is_upward {
+        input_dir
+            .parent()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Dir has no parent"))?
+    } else {
+        input_dir
+    };
+
+    read_dir(dir)
+}
+
+/// Extracts the found entries in directory
+pub fn extract_entries(dir_entries: ReadDir) -> io::Result<Vec<PathBuf>> {
+    let mut entries = Vec::new();
+
+    for entry in dir_entries {
+        match entry {
+            Ok(e) => entries.push(e.path()),
+            // Should function fail if one entry can't be read?
+            Err(err) => return io::Result::Err(err),
+        }
+    }
+
+    Ok(entries)
+}
+
 /// Return all entries for given location
-pub fn get_entries(path: &Path, is_upward: bool) -> Option<Vec<PathBuf>> {
-    dir_collect_entries(path, is_upward)
+pub fn get_entries(path: &Path, is_upward: bool) -> io::Result<Vec<PathBuf>> {
+    match read_entries_from_dir(path, is_upward) {
+        Ok(dir_entries) => extract_entries(dir_entries),
+        Err(err) => return Result::Err(err),
+    }
+}
+
+fn find_target(entries: &[PathBuf], target: &str) -> Option<PathBuf> {
+    for e in entries {
+        if e.to_string_lossy().ends_with(target) {
+            return Some(e.to_path_buf());
+        }
+    }
+
+    None
 }
 
 /// Find target and return if found
@@ -66,7 +108,7 @@ pub fn follow(entries: &[PathBuf], is_upward: bool) -> Option<Vec<PathBuf>> {
                 }
             }
 
-            if let Some(sub_entries) = get_entries(e.as_path(), is_upward) {
+            if let Ok(sub_entries) = get_entries(e.as_path(), is_upward) {
                 for se in sub_entries {
                     unsearched_entries.push(se);
                 }
@@ -79,45 +121,4 @@ pub fn follow(entries: &[PathBuf], is_upward: bool) -> Option<Vec<PathBuf>> {
     }
 
     Some(unsearched_entries)
-}
-
-fn find_target(entries: &[PathBuf], target: &str) -> Option<PathBuf> {
-    for e in entries {
-        if e.to_string_lossy().ends_with(target) {
-            return Some(e.to_path_buf());
-        }
-    }
-
-    None
-}
-
-fn dir_collect_entries(mut input_dir: &Path, upward: bool) -> Option<Vec<PathBuf>> {
-    if input_dir.parent().is_none() {
-        return None;
-    }
-
-    input_dir = match upward {
-        true => input_dir.parent().unwrap(),
-        false => input_dir,
-    };
-
-    let mut entries = Vec::new();
-
-    match read_dir(input_dir) {
-        Ok(dirs) => {
-            for entry in dirs {
-                match entry {
-                    Ok(e) => {
-                        entries.push(e.path());
-                    }
-                    Err(err) => println!("{}", err),
-                }
-            }
-        }
-        Err(err) => {
-            println!("{}", err);
-        }
-    }
-
-    Some(entries)
 }
